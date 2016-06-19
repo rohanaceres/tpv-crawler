@@ -29,30 +29,31 @@ namespace Tpv.Crawler
         /// <returns>Se o login foi bem sucedido ou não.</returns>
         public bool Login (string userName, string password)
         {
+            // Faz o request inicial, para pegar infos necessárias no login:
             IResponse initialResponse = NSoupClient.Connect(this.TpvDashboardUri.AbsoluteUri)
                 .Method(Method.Get)
                 .Execute();
             Document doc = initialResponse.Parse();
-            Element execution = doc.Select("input[id=antiforgery]").First;
+            
+            // Pega o token:
+            string antiforgery = doc.Select("input[id=antiforgery]").First.Attributes.GetValue("value");
 
-            string afval = execution.Attributes.GetValue("value");
-
+            // Pega os cookies:
             IDictionary<string, string> cookies = initialResponse.Cookies();
 
-            Debug.WriteLine(initialResponse.StatusCode());
-
+            // Envia o post de login:
             IResponse loginResponse = NSoupClient.Connect(this.TpvDashboardUri.AbsoluteUri)
                 .Data("user", userName)
                 .Data("password", password)
-                .Data("__RequestVerificationToken", afval)
+                .Data("__RequestVerificationToken", antiforgery)
                 .Cookies(cookies)
                 .Method(Method.Post)
                 .Execute();
 
-            
-            Debug.WriteLine(loginResponse.StatusCode());
+            // Verifica se o login deu certo ou não:
+            if (loginResponse.StatusCode() == System.Net.HttpStatusCode.OK) { return true; }
 
-            return true;
+            return false;
         }
     }
 }
